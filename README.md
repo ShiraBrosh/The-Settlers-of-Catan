@@ -105,10 +105,4 @@ make test
 - VS Code configuration files included in .vscode/ directory.
 - Configure your IDE to use these settings for optimal development experience.
 
-## Contribution
 
-Contributions are welcome! Fork the repository and submit pull requests. Ensure new features or bug fixes include appropriate tests.
-
-## License
-
-This project is licensed under the MIT License. See the LICENSE file for details.
