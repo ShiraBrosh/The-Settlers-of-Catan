@@ -1,5 +1,11 @@
+/*
+Shira Brosh
+211821137
+shira1d2631@gmail.com
+*/
+
+
 #include "Board.hpp"
-#include "Tile.hpp"
 #include <set> 
 
 #include <iostream>
@@ -25,6 +31,40 @@ Board::Board() : tiles{
     initializeVertices();
     initializeNeighbors();
 }
+
+// Destructor for the Board class
+Board::~Board() {
+    // Iterate through all vertices to clear buildings
+    for (int i = 0; i < vertices.size(); i++) {
+        int vertexIndex = vertices[i].getNumIndex();
+
+        // Ensure the vertex index is within a valid range
+        if (vertexIndex >= 0 && vertexIndex < static_cast<int>(vertices.size())) {
+            Building* building = vertices[i].getBuilding();
+            if (building != nullptr) {
+                // Clear the building pointer to avoid dangling references
+                vertices[i].setBuilding(nullptr);
+            }
+        }
+    }
+
+    // Iterate through all paths to clear buildings
+    for (int i = 0; i < pathes.size(); i++) {
+        // Check if the path is valid by confirming both source and target vertices
+        if (pathes[i].getSource() > 0 && pathes[i].getTarget() > 0) {
+            Building* building = pathes[i].getBuilding();
+            if (building != nullptr) {
+                // Clear the building pointer to avoid dangling references
+                pathes[i].setBuilding(nullptr);
+            }
+        }
+    }
+
+    // Clear the vectors to release the memory
+    vertices.clear();
+    pathes.clear();
+}
+
 
 void Board::initializePaths() {
     // Initialize paths between vertices
@@ -278,39 +318,46 @@ int Board::getNumPathes()const{
 std::vector<Path> Board::getPaths() const {
     return pathes;
 }
-void Board::distributeResources(int diceRoll, Player& p1, Player& p2, Player& p3) {
-    std::vector<Player*> players = { &p1, &p2, &p3 };
 
+// Method to distribute resources to players based on dice roll
+void Board::distributeResources(int diceRoll, Player& p1, Player& p2, Player& p3) {
+    std::vector<Player*> players = { &p1, &p2, &p3 }; // Create a vector of player pointers
+
+    // Handle the case where a 7 is rolled
     if (diceRoll == 7) {
-        // Handle the case where a 7 is rolled (discard excess resources)
         for (Player* player : players) {
-            if (player->getResources().size() > 7) {
-                discardResources(*player);
+            if (player->getResources().size() > 7) { // Check if player has more than 7 resources
+                discardResources(*player); // Discard excess resources
+            } else {
+                std::cout << "No players need to discard resources." << std::endl;
             }
         }
-        return;
+        return; // Exit the function as no further resource distribution is needed
     }
 
+    // Find tiles corresponding to the dice roll number
     auto it = numberTiles.find(diceRoll);
-    if (it != numberTiles.end()) {
-        for (const Tile& tile : it->second) {
-            Resource resource = tile.getResource();
+    if (it != numberTiles.end()) { // If tiles corresponding to the dice roll number are found
+        for (const Tile& tile : it->second) { // Iterate over the tiles
+            Resource resource = tile.getResource(); // Get the resource from the tile
             std::cout << "Distributing " << tile.getResourceType() << " resources..." << std::endl;
 
-            for (Player* player : players) {
-                for (Building* building : player->getBuildings()) {
-                    int vertexIndex = building->getVertex();
+            for (Player* player : players) { // Iterate over the players
+                for (Building* building : player->getBuildings()) { // Iterate over the buildings of the player
+                    int vertexIndex = building->getVertex(); // Get the vertex index of the building
 
+                    // Handle resource distribution for cities
                     if (building->getType() == CITY) {
-                        const Vertex& vertex = getVertexFromIndex(vertexIndex);
-                        if (vertex.isAdjacentToTile(tile)) {
-                            player->addResource(resource, 2); // Cities receive 2 resources
+                        const Vertex& vertex = getVertexFromIndex(vertexIndex); // Get the vertex from the index
+                        if (vertex.isAdjacentToTile(tile)) { // Check if the vertex is adjacent to the tile
+                            player->addResource(resource, 2); // Add 2 resources to the player
                             std::cout << player->getName() << " received 2 " << tile.getResourceType() << std::endl;
                         }
+                    // Handle resource distribution for settlements
                     } else if (building->getType() == SETTLEMENT) {
-                        const Vertex& vertex = getVertexFromIndex(vertexIndex);
-                        if (vertex.isAdjacentToTile(tile)) {
-                            player->addResource(resource, 1); // Settlements receive 1 resource
+                        const Vertex& vertex = getVertexFromIndex(vertexIndex); // Get the vertex from the index
+                        if (vertex.isAdjacentToTile(tile)) { // Check if the vertex is adjacent to the tile
+                            player->addResource(resource, 1); // Add 1 resource to the player
                             std::cout << player->getName() << " received 1 " << tile.getResourceType() << std::endl;
                         }
                     }
@@ -329,6 +376,7 @@ void Board::discardResources(Player& p) {
 
     // Discard resources in arbitrary order; in a real game, the player would choose
         for (auto& pair : p.getResources()) {
+
             // Exit the loop if no more resources need to be discarded
             if (resourcesToDiscard <= 0){
                 break;
@@ -345,51 +393,47 @@ void Board::discardResources(Player& p) {
     }
 }
 
+// Method to get a vertex from its index
 const Vertex& Board::getVertexFromIndex(int nodeIndex) const {
-    if (nodeIndex >= 0 && nodeIndex < vertices.size()) {
-        return vertices[nodeIndex-1];
+    if (nodeIndex >= 0 && nodeIndex < vertices.size()) { // Check if the index is within bounds
+        return vertices[nodeIndex - 1]; // Return the vertex (adjusting index as needed)
     } else {
         std::cout << "Vertex " << nodeIndex << " is invalid" << std::endl;
-        return vertices.back();
+        return vertices.back(); // Return the last vertex as a fallback
     }
 }
 
-
+// Method to get a path from source and target indices
 const Path& Board::getPathFromIndexes(int source, int target) const {
-    for (int i=0; i<pathes.size(); i++) {
+    for (int i = 0; i < pathes.size(); i++) { // Iterate over all paths
         if ((pathes[i].getSource() == source && pathes[i].getTarget() == target) ||
             (pathes[i].getSource() == target && pathes[i].getTarget() == source)) {
-            return pathes[i];
+            return pathes[i]; // Return the path if it matches the source and target
         }
     }
-    return pathes.back(); 
+    return pathes.back(); // Return the last path as a fallback
 }
 
+// Method to place a piece (road, settlement, or city) on the board
 void Board::putPieceOnTheBoard(Building* build, int sourceVertex, int targetVertex) {
-    if (build->getType() == ROAD) {
-        for (int i = 0; i < pathes.size(); i++) {
+    if (build->getType() == ROAD) { // If the building is a road
+        for (int i = 0; i < pathes.size(); i++) { // Iterate over all paths
             if ((pathes[i].getSource() == sourceVertex && pathes[i].getTarget() == targetVertex) ||
-                (pathes[i].getSource()== targetVertex && pathes[i].getTarget() == sourceVertex)) {
-                pathes[i].setBuilding(build);
-                
+                (pathes[i].getSource() == targetVertex && pathes[i].getTarget() == sourceVertex)) {
+                pathes[i].setBuilding(build); // Set the building on the path
                 std::cout << build->getOwnerName() << " built road (" << sourceVertex << "->" << targetVertex << ")." << std::endl;
             }
         }
-    } else {
-        if (build->getType() == SETTLEMENT) {
-            vertices[sourceVertex - 1].setBuilding(build);
-            std::cout << build->getOwnerName() << " built settlement on vertex " << sourceVertex << "." << std::endl;
-        } else {
-            if (build->getType() == CITY) {
-                vertices[sourceVertex - 1].setBuilding(build);
-
-                std::cout << build->getOwnerName() << " built city on vertex " << sourceVertex << "." << std::endl;
-            }
-    }
+    } else if (build->getType() == SETTLEMENT) { // If the building is a settlement
+        vertices[sourceVertex - 1].setBuilding(build); // Set the building on the vertex
+        std::cout << build->getOwnerName() << " built settlement on vertex " << sourceVertex << "." << std::endl;
+    } else if (build->getType() == CITY) { // If the building is a city
+        vertices[sourceVertex - 1].setBuilding(build); // Set the building on the vertex
+        std::cout << build->getOwnerName() << " built city on vertex " << sourceVertex << "." << std::endl;
     }
 }
 
-
+// Method to print the board state
 void Board::printBoard() const {
     for (const Vertex& vertex : vertices) {
         if (vertex.hasBuilding()) {
@@ -407,22 +451,20 @@ void Board::printBoard() const {
 }
 
 
+// Method to check if there's a road on a given edge
 bool Board::hasRoadOnEdge(int vertex1, int vertex2) const {
     const Path& path = getPathFromIndexes(vertex1, vertex2);
-    if (path.hasRoad()){
-        return true;
-    }
-    return false;
+    return path.hasRoad();
 }
 
+// Method to check if there's a settlement on a given vertex
 bool Board::hasSettlementOnVertex(int vertexInd) const {
     const Vertex& vertex = getVertexFromIndex(vertexInd);
     return vertex.hasSettlement();
 }
 
-
+// Method to check if there's a city on a given vertex
 bool Board::hasCityOnVertex(int vertexInd) const {
     const Vertex& vertex = getVertexFromIndex(vertexInd);
     return vertex.hasCity();
 }
-

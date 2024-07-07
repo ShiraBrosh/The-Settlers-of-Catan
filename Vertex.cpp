@@ -1,70 +1,95 @@
+/*
+Shira Brosh
+211821137
+shira1d2631@gmail.com
+*/
+
 #include "Vertex.hpp"
+#include <iostream>
+#include <algorithm>
 
-Vertex::Vertex() : numIndex(0), building(nullptr) {}
+// Default constructor
+Vertex::Vertex() : numIndex(-1), building(nullptr) {}
 
-Vertex::Vertex(const std::vector<Tile>& tiles, const std::vector<Path>& pathes, int index): 
-    numIndex(index), building(nullptr), tileList(tiles), pathsList(pathes) {}
-
-Vertex::~Vertex() {
-    delete building;
+// Constructor that initializes the vertex with tiles, paths, and index
+Vertex::Vertex(const std::vector<Tile>& tiles, const std::vector<Path>& pathes, int index) 
+    : numIndex(index), building(nullptr), tileList(tiles), pathsList(pathes) {
 }
 
+// Destructor
+Vertex::~Vertex() {}
+
+// Getter for vertex index
 int Vertex::getNumIndex() const {
     return numIndex;
 }
 
+// Getter for the building on this vertex
 Building* Vertex::getBuilding() const {
     return building;
 }
 
-
+// Getter for the paths connected to this vertex
 const std::vector<Path>& Vertex::getPaths() const {
     return pathsList;
 }
 
-
+// Return paths that have roads
 std::vector<Path> Vertex::getPathsForRoads() const {
-    std::vector<Path> pathsWithBuilding;
+    std::vector<Path> pathsWithRoads;
     for (const Path& path : pathsList) {
         if (path.hasRoad()) {
-            pathsWithBuilding.push_back(path);
+            pathsWithRoads.push_back(path);
         }
     }
-    return pathsWithBuilding;
+    return pathsWithRoads;
 }
 
+// Getter for the neighbors of this vertex
 const std::vector<int>& Vertex::getNeighbors() const {
-        return neighborsList;
-    }
+    return neighborsList;
+}
 
+// Setter for the building on this vertex
 void Vertex::setBuilding(Building* newBuilding) {
     if (building != nullptr) {
-        delete building;
+        // Remove the building from the player's list of buildings
+        Player* owner = building->getOwner();
+        if (owner != nullptr) {
+            auto& playerBuildings = owner->getBuildings();
+            auto it = std::find(playerBuildings.begin(), playerBuildings.end(), building);
+            if (it != playerBuildings.end()) {
+                playerBuildings.erase(it);
+                owner->printBuildings(); // Assuming a method to print buildings owned by the player
+            }
+        }
+        delete building; // Assuming ownership management here
     }
     building = newBuilding;
 }
 
+// Check if there is a building on this vertex
 bool Vertex::hasBuilding() const {
     return building != nullptr && !building->isEmpty();
 }
 
-
-
+// Check if there is a settlement on this vertex
 bool Vertex::hasSettlement() const {
     if (this->hasBuilding() && building->getType() == SETTLEMENT) {
-            return true;
+        return true;
     }
     return false;
 }
 
+// Check if there is a city on this vertex
 bool Vertex::hasCity() const {
     if (this->hasBuilding() && building->getType() == CITY) {
-            return true;
+        return true;
     }
     return false;
 }
 
-
+// Check if there is an adjacent settlement to this vertex
 bool Vertex::hasAdjacentSettlement(const Board& board) const {
     for (const int& neighborIndex : neighborsList) {
         if (neighborIndex != -1) {
@@ -77,25 +102,21 @@ bool Vertex::hasAdjacentSettlement(const Board& board) const {
     return false;
 }
 
-
-
+// Check if this vertex is adjacent to a given tile
 bool Vertex::isAdjacentToTile(Tile tile) const {
-    for (int i=0; i<tileList.size(); i++){
-        if(tileList[i].getResource() == tile.getResource() && tileList[i].getNumber() == tile.getNumber())
+    for (const Tile& vertexTile : tileList) {
+        if (vertexTile.getResource() == tile.getResource() && vertexTile.getNumber() == tile.getNumber()) {
             return true;
+        }
     }
-
     return false;
 }
 
-
-void Vertex::addNeighbor(int numVertex){
-     // Check if the neighbor is already in the list
-    for (int neighbor : neighborsList) {
-        if (neighbor == numVertex) {
-            return; // Neighbor already exists, no need to add
-        }
+// Add a neighbor to this vertex if it doesn't already exist in the neighbors list
+void Vertex::addNeighbor(int numVertex) {
+    // Check if the neighbor is already in the list
+    if (std::find(neighborsList.begin(), neighborsList.end(), numVertex) == neighborsList.end()) {
+        neighborsList.push_back(numVertex);
     }
-    // Add the new neighbor
-    neighborsList.push_back(numVertex);
 }
+
